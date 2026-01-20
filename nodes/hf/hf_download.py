@@ -1,31 +1,38 @@
 from ..base_downloader import BaseModelDownloader, get_model_dirs
 from ..download_utils import DownloadManager
 
-class HFDownloader(BaseModelDownloader):     
+class HFDownloader(BaseModelDownloader):
     @classmethod
     def INPUT_TYPES(cls):
         return {
-            "required": {       
+            "required": {
                 "repo_id": ("STRING", {"multiline": False, "default": "runwayml/stable-diffusion-v1-5"}),
                 "filename": ("STRING", {"multiline": False, "default": "v1-5-pruned-emaonly.ckpt"}),
                 "local_path": (get_model_dirs(),),
-                
             },
             "optional": {
                 "overwrite": ("BOOLEAN", {"default": True}),
                 "local_path_override": ("STRING", {"default": ""}),
+                "hf_token": ("STRING", {"default": "", "multiline": False, "password": True}),
             },
-            "hidden": {
-                "node_id": "UNIQUE_ID"
-            }
+            "hidden": {"node_id": "UNIQUE_ID"}
         }
-        
+    
     FUNCTION = "download"
 
-    def download(self, repo_id, filename, local_path, node_id, overwrite=False, local_path_override=""):
+    def download(self, repo_id, filename, local_path, node_id, overwrite=False, local_path_override="", hf_token=""):
         if not repo_id or not filename:
             print(f"Missing required values: repo_id='{repo_id}', filename='{filename}'")
             return {}
+        
+        # Wenn ein Token angegeben ist, kurz vorher einloggen
+        if hf_token:
+            try:
+                import huggingface_hub
+                huggingface_hub.login(token=hf_token)
+            except Exception as e:
+                print(f"HF‑Login‑Fehler: {e}")
+                raise
         
         final_path = local_path_override if local_path_override else local_path
         
@@ -42,13 +49,12 @@ class HFDownloader(BaseModelDownloader):
             url=url,
             progress_callback=self
         )
-    
 
 
 class HFAuthDownloader(HFDownloader):  # Inherit from HFDownloader to share methods
     def __init__(self):
         super().__init__()
-        
+
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -56,30 +62,19 @@ class HFAuthDownloader(HFDownloader):  # Inherit from HFDownloader to share meth
                 "repo_id": ("STRING", {"default": "runwayml/stable-diffusion-v1-5"}),
                 "filename": ("STRING", {"default": "v1-5-pruned.ckpt"}),
                 "local_path": ("STRING", {"default": "checkpoints"}),
-                "hf_token": ("STRING", {
-                    "default": "", 
-                    "multiline": False, 
-                    "password": True
-                }),
+                "hf_token": ("STRING", {"default": "", "multiline": False, "password": True}),
                 "overwrite": ("BOOLEAN", {"default": False}),
             }
         }
 
+    # Der Node nutzt das überarbeitete download‑Methoden‑Schema von HFDownloader
     def download_model(self, repo_id, filename, local_path, hf_token, overwrite):
-        print(f'downloading model {repo_id} {filename} {local_path} {hf_token} {overwrite}')
-        try:
-            # Always use token for auth version
-            import huggingface_hub
-            huggingface_hub.login(token=hf_token)
-            
-            result = self.download(
-                repo_id=repo_id,
-                filename=filename,
-                local_path=local_path,
-                node_id=self.node_id,
-                overwrite=overwrite
-            )
-            return {}
-        except Exception as e:
-            print(f"Error in HF Auth Downloader: {str(e)}")
-            raise e
+        print(f'downloading model {repo_id} {filename} {local_path} token={"*"*len(hf_token)} overwrite={overwrite}')
+        return self.download(
+            repo_id=repo_id,
+            filename=filename,
+            local_path=local_path,
+            node_id=self.node_id,
+            overwrite=overwrite,
+            hf_token=hf_token
+        )
