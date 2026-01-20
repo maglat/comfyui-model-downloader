@@ -1,4 +1,4 @@
-from .nodes.hf.hf_download import HFDownloader
+from .nodes.hf.hf_download import HFDownloader, HFAuthDownloader
 from .nodes.auto.downloader import AutoModelDownloader
 from .nodes.cai.cai_download import CivitAIDownloader
 import os
@@ -6,6 +6,7 @@ import os
 # Node mappings
 NODE_CLASS_MAPPINGS = { 
     "HF Downloader": HFDownloader,
+    "HF Auth Downloader": HFAuthDownloader,
     "Auto Model Downloader": AutoModelDownloader,
     "CivitAI Downloader": CivitAIDownloader,
 }
@@ -13,6 +14,7 @@ NODE_CLASS_MAPPINGS = {
 # Display names
 NODE_DISPLAY_NAME_MAPPINGS = { 
     "HF Downloader": "HF Download",
+    "HF Auth Downloader": "HF Download (mit Token)",
     "Auto Model Downloader": "Auto Model Finder (Experimental)",
     "CivitAI Downloader": "CivitAI Download",
 }
